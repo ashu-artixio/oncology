@@ -1,0 +1,12 @@
+{
+  "mondo_ingest": {
+    "enabled": true,
+    "description": "Downloads MONDO ontology and syncs human disease indications to the QuriousRI database",
+    "source_url": "http://purl.obolibrary.org/obo/mondo.json",
+    "cache_dir": "temp/mondo_cache",
+    "batch_size": 500,
+    "human_only": true,
+    "force_refresh": false
+  }
+}
+
