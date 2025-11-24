@@ -22,11 +22,13 @@ if __package__ in (None, ""):
         ensure_mondo_json,
         extract_version,
     )
+    from mondo_filter import filter_nodes  # type: ignore
     from mondo_normalizer import attach_relationships  # type: ignore
     from mondo_normalizer import build_relationship_index, compute_depths, flatten_nodes  # type: ignore
 else:
     from .mondo_db_mapper import MondoDbMapper
     from .mondo_fetcher import DEFAULT_SOURCE_URL, ensure_mondo_json, extract_version
+    from .mondo_filter import filter_nodes
     from .mondo_normalizer import (
         attach_relationships,
         build_relationship_index,
@@ -71,6 +73,9 @@ class MondoIngestRunner:
         self.force_refresh = bool(module_config.get("force_refresh", False))
         self.batch_size = int(module_config.get("batch_size", 500))
         self.human_only = bool(module_config.get("human_only", True))
+        self.exclude_mondo_ids = module_config.get("exclude_mondo_ids", [])
+        if isinstance(self.exclude_mondo_ids, str):
+            self.exclude_mondo_ids = [self.exclude_mondo_ids]
 
     def run(self, updated_since: Optional[str] = None) -> None:
         """Execute the ingestion pipeline."""
@@ -102,6 +107,27 @@ class MondoIngestRunner:
         depth_lookup = compute_depths(parents, [node["indication_id"] for node in normalized_nodes])
         for node in normalized_nodes:
             node["depth"] = depth_lookup.get(node["indication_id"], -1)
+
+        # Filter out excluded MONDO IDs and their related nodes
+        if self.exclude_mondo_ids:
+            before_filter_count = len(normalized_nodes)
+            LOGGER.info(
+                "Applying filter to exclude MONDO IDs: %s",
+                ", ".join(self.exclude_mondo_ids),
+            )
+            normalized_nodes = filter_nodes(
+                normalized_nodes,
+                exclude_mondo_ids=self.exclude_mondo_ids,
+                parents=parents,
+                children=children,
+            )
+            LOGGER.info(
+                "Filtered nodes by exclude_mondo_ids (kept %s of %s)",
+                len(normalized_nodes),
+                before_filter_count,
+            )
+        else:
+            LOGGER.debug("No exclude_mondo_ids configured, skipping filtering")
 
         normalized_nodes.sort(
             key=lambda item: (

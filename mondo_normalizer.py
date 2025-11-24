@@ -3,11 +3,14 @@
 
 from __future__ import annotations
 
+import logging
 import re
 from collections import defaultdict
 from dataclasses import dataclass
 from datetime import datetime
 from typing import Dict, Iterable, List, Optional, Sequence, Set, Tuple
+
+LOGGER = logging.getLogger("MONDO")
 
 MONDO_ID_PATTERN = re.compile(r"MONDO[_:]\d+")
 NCBITAXON_PATTERN = re.compile(r"NCBITaxon[_:](\d+)")
@@ -209,9 +212,15 @@ def normalize_node(
         return None
 
     meta = node.get("meta") or {}
+    name = node.get("lbl") or ""
+    
+    # Skip nodes with empty or null names
+    if not name or not name.strip():
+        return None
+
     normalized = {
         "indication_id": mondo_id,
-        "name": node.get("lbl") or "",
+        "name": name,
         "description": meta.get("definition", {}).get("val"),
         "synonyms": parse_synonyms(meta),
         "external_ids": parse_external_ids(meta),
@@ -232,10 +241,29 @@ def flatten_nodes(
     human_only: bool = True,
 ) -> Iterable[Dict]:
     """Yield normalized nodes for ingestion."""
+    total_nodes = 0
+    skipped_empty_name = 0
+    
     for node in graph.get("nodes") or []:
+        total_nodes += 1
+        
+        # Check for empty name before normalization (for accurate counting)
+        name = node.get("lbl") or ""
+        if not name or not name.strip():
+            skipped_empty_name += 1
+            continue  # Skip this node, don't even try to normalize
+        
         normalized = normalize_node(node, release_version, human_only=human_only)
         if normalized:
             yield normalized
+    
+    # Log statistics if any nodes were skipped due to empty names
+    if skipped_empty_name > 0:
+        LOGGER.info(
+            "Skipped %s nodes with empty or null names (out of %s total nodes)",
+            skipped_empty_name,
+            total_nodes,
+        )
 
 
 def attach_relationships(

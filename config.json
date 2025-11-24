@@ -6,7 +6,8 @@
     "cache_dir": "temp/mondo_cache",
     "batch_size": 500,
     "human_only": true,
-    "force_refresh": false
+    "force_refresh": false,
+    "exclude_mondo_ids": ["MONDO_0005583"]
   }
 }
 
