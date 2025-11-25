@@ -6,7 +6,7 @@ services:
       context: .
     container_name: mondo-text-app
     environment:
-      PG_HOST: host.docker.internal
+      PG_HOST: quriousri_postgres in docker-compose
       PG_PORT: 5432
       PG_DATABASE: quriousri_db
       PG_USER: postgres
