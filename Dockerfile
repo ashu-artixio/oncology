@@ -21,4 +21,3 @@ RUN mkdir -p /app/temp/mondo_cache
 
 ENTRYPOINT ["python", "app.py"]
 CMD ["mondo_ingest", "--config", "/app/config.json"]
-

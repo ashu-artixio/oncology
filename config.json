@@ -7,7 +7,9 @@
     "batch_size": 500,
     "human_only": true,
     "force_refresh": false,
-    "exclude_mondo_ids": ["MONDO_0005583"]
+    "exclude_mondo_ids": ["MONDO_0005583"],
+    "map_therapeutic_areas": true,
+    "therapeutic_area_batch_size": 50
   }
 }
 

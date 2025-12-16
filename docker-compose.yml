@@ -1,16 +1,16 @@
-version: "3.9"
-
 services:
   app:
     build:
       context: .
     container_name: mondo-text-app
     environment:
-      PG_HOST: quriousri_postgres in docker-compose
-      PG_PORT: 5432
-      PG_DATABASE: quriousri_db
-      PG_USER: postgres
-      PG_PASSWORD: postgres
+      PG_HOST: ${PG_HOST:-quriousri_postgres}
+      PG_PORT: ${PG_PORT:-5432}
+      PG_DATABASE: ${PG_DATABASE:-quriousri_db}
+      PG_USER: ${PG_USER:-postgres}
+      PG_PASSWORD: ${PG_PASSWORD:-postgres}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:}
+      OPENAI_MODEL: ${OPENAI_MODEL:-gpt-4o-mini}
     command: ["mondo_ingest", "--config", "/app/config.json"]
     volumes:
       - mondo_cache:/app/temp/mondo_cache

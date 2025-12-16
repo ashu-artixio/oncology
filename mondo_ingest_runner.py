@@ -25,6 +25,7 @@ if __package__ in (None, ""):
     from mondo_filter import filter_nodes  # type: ignore
     from mondo_normalizer import attach_relationships  # type: ignore
     from mondo_normalizer import build_relationship_index, compute_depths, flatten_nodes  # type: ignore
+    from therapeutic_area_mapper import TherapeuticAreaMapper  # type: ignore
 else:
     from .mondo_db_mapper import MondoDbMapper
     from .mondo_fetcher import DEFAULT_SOURCE_URL, ensure_mondo_json, extract_version
@@ -35,6 +36,7 @@ else:
         compute_depths,
         flatten_nodes,
     )
+    from .therapeutic_area_mapper import TherapeuticAreaMapper
 
 LOGGER = logging.getLogger("MONDO")
 
@@ -76,6 +78,8 @@ class MondoIngestRunner:
         self.exclude_mondo_ids = module_config.get("exclude_mondo_ids", [])
         if isinstance(self.exclude_mondo_ids, str):
             self.exclude_mondo_ids = [self.exclude_mondo_ids]
+        self.map_therapeutic_areas = bool(module_config.get("map_therapeutic_areas", True))
+        self.therapeutic_area_batch_size = int(module_config.get("therapeutic_area_batch_size", 50))
 
     def run(self, updated_since: Optional[str] = None) -> None:
         """Execute the ingestion pipeline."""
@@ -204,4 +208,29 @@ class MondoIngestRunner:
             stats["nodes_processed"],
             stats["relationships_created"],
         )
+
+        # Map indications to therapeutic areas if enabled
+        if self.map_therapeutic_areas:
+            LOGGER.info("Starting therapeutic area mapping for ingested indications")
+            try:
+                with TherapeuticAreaMapper(
+                    batch_size=self.therapeutic_area_batch_size,
+                ) as ta_mapper:
+                    ta_stats = ta_mapper.map_indications_to_therapeutic_areas(
+                        only_new_or_updated=True,
+                    )
+                    LOGGER.info(
+                        "Therapeutic area mapping complete: %s indications processed, %s mappings created, %s errors",
+                        ta_stats.get("indications_processed", 0),
+                        ta_stats.get("mappings_created", 0),
+                        ta_stats.get("errors", 0),
+                    )
+            except Exception as e:
+                LOGGER.error(
+                    "Error during therapeutic area mapping: %s. Continuing without therapeutic area mappings.",
+                    e,
+                    exc_info=True,
+                )
+        else:
+            LOGGER.info("Therapeutic area mapping is disabled in configuration")
 
